@@ -39,7 +39,7 @@ class LongVariableNamesRecord {
     int longNamesLength = longNames.length;
     String shortName = null;
     String shortNameASCII = null;
-    byte[] longName = null;
+    byte[] longName;
     int tokenStart = 0;
     int varIndex = 0;
 
