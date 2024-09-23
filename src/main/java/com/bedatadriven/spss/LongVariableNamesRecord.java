@@ -15,6 +15,8 @@
 package com.bedatadriven.spss;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -22,19 +24,21 @@ class LongVariableNamesRecord {
 
   static final int EXTENDED_RECORD_TYPE = 13;
 
-  private byte[] longNames;
+  private final byte[] longNames;
 
   LongVariableNamesRecord(ExtendedRecordHeader header, SpssInputStream inputStream) throws IOException {
     longNames = inputStream.readBytes(header.getTotalLength());
   }
 
   void parseInto(List<SpssVariable> variables, Map<String, SpssVariable> variableNames) {
-
+    System.out.println("parseInto Function started");
+    Charset ASCII = StandardCharsets.US_ASCII;
     // longNames is in the format of
     // SHORT1=Longer name\tSHORT2=Another longer name...
 
     int longNamesLength = longNames.length;
     String shortName = null;
+    String shortNameASCII = null;
     byte[] longName = null;
     int tokenStart = 0;
     int varIndex = 0;
@@ -46,6 +50,7 @@ class LongVariableNamesRecord {
         // the handling of encoding is changed in Variable() than
         // it needs to be changed here as well...
         shortName = new String(longNames, tokenStart, i - tokenStart);
+        shortNameASCII = new String(longNames, tokenStart, i - tokenStart, ASCII);
         tokenStart = i + 1;
       } else if (i == longNamesLength || longNames[i] == '\t') {
         longName = new byte[i - tokenStart];
@@ -54,7 +59,21 @@ class LongVariableNamesRecord {
         if (variables.get(varIndex).shortName.equals(shortName)) {
           variables.get(varIndex).longName = longName;
         } else {
-          variableNames.get(shortName).longName = longName;
+          //variableNames.get(shortName).longName = longName;
+
+          SpssVariable vName = variableNames.get(shortName);
+          if(vName == null) {
+            vName = variableNames.get(shortNameASCII);
+
+            if(shortNameASCII == null) {
+              throw new RuntimeException("Variable with shortName "+ shortName + " not found");
+            } else {
+              vName.longName = longName;
+            }
+          } else {
+            vName.longName = longName;
+          }
+
         }
         tokenStart = i + 1;
         varIndex++;
